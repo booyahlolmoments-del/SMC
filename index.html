@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>SMC & ICT Pro Trade Finder</title>
+  <style>
+    :root {
+      --bg: #090d14;
+      --panel: #111824;
+      --panel-2: #182234;
+      --text: #e6edf7;
+      --muted: #8fa0b8;
+      --accent: #38bdf8;
+      --bull: #22c55e;
+      --bear: #ef4444;
+      --warn: #f59e0b;
+      --purple: #a855f7;
+      --pink: #ec4899;
+      --border: #243248;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 12px;
+    }
+
+    .container {
+      max-width: 1180px;
+      margin: 0 auto;
+    }
+
+    .header {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      padding: 14px 16px;
+      border-radius: 14px;
+      margin-bottom: 12px;
+    }
+
+    .header h1 {
+      font-size: 1.15rem;
+      color: var(--accent);
+    }
+
+    .header p {
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .badges-wrap {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .badge {
+      background: rgba(56, 189, 248, 0.12);
+      color: var(--accent);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+      gap: 10px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      padding: 12px;
+      border-radius: 14px;
+      margin-bottom: 12px;
+      align-items: end;
+    }
+
+    .field label {
+      display: block;
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-bottom: 5px;
+    }
+
+    .field select,
+    .field input {
+      width: 100%;
+      background: var(--panel-2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 9px 10px;
+      border-radius: 10px;
+      font-size: 0.86rem;
+      outline: none;
+    }
+
+    .field select:focus,
+    .field input:focus {
+      border-color: var(--accent);
+    }
+
+    .btn-find {
+      width: 100%;
+      background: linear-gradient(135deg, #0284c7, #22c55e);
+      color: #041019;
+      border: none;
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .btn-find:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .grid-main {
+      display: grid;
+      grid-template-columns: 1.8fr 1.2fr;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    @media (max-width: 880px) {
+      .grid-main {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+    }
+
+    .card-title {
+      font-size: 0.9rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .chart-tools {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .tool-btn {
+      background: var(--panel-2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 4px 10px;
+      border-radius: 7px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    canvas {
+      width: 100%;
+      height: 390px;
+      display: block;
+      background: #0b111c;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      touch-action: none;
+      cursor: grab;
+    }
+
+    canvas:active {
+      cursor: grabbing;
+    }
+
+    .setup-box {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .metric {
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 9px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.84rem;
+    }
+
+    .metric span:first-child {
+      color: var(--muted);
+    }
+
+    .metric span:last-child {
+      font-weight: 700;
+      text-align: right;
+    }
+
+    .bull { color: var(--bull) !important; }
+    .bear { color: var(--bear) !important; }
+    .warn { color: var(--warn) !important; }
+    .purp { color: var(--purple) !important; }
+    .pink { color: var(--pink) !important; }
+
+    .notes-box {
+      margin-top: 12px;
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+    }
+
+    .notes-box h3 {
+      font-size: 0.85rem;
+      color: var(--accent);
+      margin-bottom: 8px;
+    }
+
+    .logic-list {
+      padding-left: 18px;
+      font-size: 0.81rem;
+      color: var(--text);
+      line-height: 1.55;
+    }
+
+    .logic-list li {
+      margin-bottom: 5px;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      font-size: 0.74rem;
+      color: var(--muted);
+      margin-top: 8px;
+    }
+
+    .legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 2px;
+      display: inline-block;
+    }
+
+    .status-bar {
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div>
+        <h1>SMC & ICT Pro Engine</h1>
+        <p>Daily HTF Bias • OB • FVG • Breaker Block • Rejection Block • Liquidity & IDM</p>
+      </div>
+      <div class="badges-wrap">
+        <div class="badge" id="killzoneBadge">Session: --</div>
+        <div class="badge" id="nyClockBadge">NY (UTC-5): --:--:--</div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="field">
+        <label for="pairSelect">অ্যাসেট (Pair)</label>
+        <select id="pairSelect">
+          <option value="BTCUSDT">BTC/USD (Bitcoin)</option>
+          <option value="ETHUSDT">ETH/USD (Ethereum)</option>
+          <option value="SOLUSDT">SOL/USD (Solana)</option>
+          <option value="LINKUSDT">LINK/USD (Chainlink)</option>
+          <option value="PAXGUSDT">GOLD (PAXG/USD)</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="tfSelect">এন্ট্রি টাইমফ্রেম</label>
+        <select id="tfSelect">
+          <option value="15m" selected>15 Minute (15m)</option>
+          <option value="1h">1 Hour (1H)</option>
+          <option value="4h">4 Hour (4H)</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="riskInput">রিস্ক % (Risk per Trade)</label>
+        <input type="number" id="riskInput" value="1.0" min="0.1" max="10" step="0.1" />
+      </div>
+
+      <div class="field">
+        <button class="btn-find" id="findTradeBtn">⚡ Fast Scan Setup</button>
+      </div>
+    </div>
+
+    <div class="grid-main">
+      <div class="card">
+        <div class="card-title">
+          <span id="chartHeading">ইন্টারঅ্যাক্টিভ SMC চার্ট</span>
+          <div class="chart-tools">
+            <button class="tool-btn" id="zoomInBtn">+</button>
+            <button class="tool-btn" id="zoomOutBtn">−</button>
+            <button class="tool-btn" id="resetViewBtn">Reset</button>
+            <span id="biasBadge" class="badge">HTF Bias: --</span>
+          </div>
+        </div>
+        <canvas id="smcCanvas" width="800" height="390"></canvas>
+        <div class="legend">
+          <span><i class="dot" style="background:rgba(56,189,248,0.45)"></i>FVG</span>
+          <span><i class="dot" style="background:rgba(168,85,247,0.45)"></i>Order Block</span>
+          <span><i class="dot" style="background:rgba(236,72,153,0.45)"></i>Breaker Block</span>
+          <span><i class="dot" style="background:rgba(245,158,11,0.5)"></i>Rejection Block</span>
+          <span><i class="dot" style="background:#22c55e"></i>TP</span>
+          <span><i class="dot" style="background:#ef4444"></i>SL</span>
+        </div>
+        <div class="status-bar" id="statusText">চার্ট আঙুল দিয়ে ড্র্যাগ করে ডানে-বামে সরান এবং +/- দিয়ে জুম করুন।</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <span>ট্রেড সেটআপ (High Confluence)</span>
+          <span id="confluenceScore" class="badge">Score: --</span>
+        </div>
+        <div class="setup-box">
+          <div class="metric">
+            <span>ডিরেকশন (Daily HTF Aligned)</span>
+            <span id="outDir">--</span>
+          </div>
+          <div class="metric">
+            <span>এন্ট্রি প্রাইস (POI)</span>
+            <span id="outEntry">--</span>
+          </div>
+          <div class="metric">
+            <span>স্টপ লস (Structural SL)</span>
+            <span id="outSL" class="bear">--</span>
+          </div>
+          <div class="metric">
+            <span>টেক প্রফিট (Draw on Liq.)</span>
+            <span id="outTP" class="bull">--</span>
+          </div>
+          <div class="metric">
+            <span>রিস্ক-টু-রিওয়ার্ড (RR)</span>
+            <span id="outRR">--</span>
+          </div>
+          <div class="metric">
+            <span>অ্যাক্টিভ ব্লকস (OB / BB / RB)</span>
+            <span id="outBlocks" class="pink">--</span>
+          </div>
+          <div class="metric">
+            <span>লিকুইডিটি ও IDM স্ট্যাটাস</span>
+            <span id="outLiq" class="purp">--</span>
+          </div>
+          <div class="metric">
+            <span>প্রিমিয়াম / ডিসকাউন্ট (0.5)</span>
+            <span id="outZone">--</span>
+          </div>
+        </div>
+
+        <div class="notes-box">
+          <h3>📌 মেইন ট্রেড নোট (SMC & ICT লজিক)</h3>
+          <ul class="logic-list" id="outReasons">
+            <li>স্ক্যান শুরু হচ্ছে...</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const pairSelect = document.getElementById("pairSelect");
+    const tfSelect = document.getElementById("tfSelect");
+    const riskInput = document.getElementById("riskInput");
+    const findTradeBtn = document.getElementById("findTradeBtn");
+    const canvas = document.getElementById("smcCanvas");
+    const ctx = canvas.getContext("2d");
+
+    let chartState = {
+      candles: [],
+      setup: null,
+      visibleCount: 55,
+      offsetFromEnd: 0,
+      isDragging: false,
+      lastX: 0
+    };
+
+    function updateNYClockAndKillzone() {
+      const now = new Date();
+      const formatter = new Intl.DateTimeFormat("en-US", {
+        timeZone: "America/New_York",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false
+      });
+      const nyTime = formatter.format(now);
+      document.getElementById("nyClockBadge").textContent = `NY (UTC-5): ${nyTime}`;
+
+      const hour = parseInt(nyTime.split(":")[0], 10);
+      let kz = "Off-Session";
+      if (hour >= 20 || hour < 0) kz = "Asian Range";
+      else if (hour >= 2 && hour < 5) kz = "London Killzone";
+      else if (hour >= 7 && hour < 10) kz = "NY AM Killzone";
+      else if (hour >= 10 && hour < 12) kz = "NY Silver Bullet";
+      else if (hour >= 13 && hour < 16) kz = "NY PM Session";
+
+      const kzEl = document.getElementById("killzoneBadge");
+      kzEl.textContent = `ICT: ${kz}`;
+      kzEl.style.color = kz.includes("Killzone") || kz.includes("Silver") ? "#22c55e" : "#38bdf8";
+    }
+    setInterval(updateNYClockAndKillzone, 1000);
+    updateNYClockAndKillzone();
+
+    async function fetchKlines(symbol, interval, limit = 100) {
+      const url = `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`Binance API ত্রুটি (${interval})`);
+      const raw = await res.json();
+      return raw.map((k) => ({
+        time: k[0],
+        open: parseFloat(k[1]),
+        high: parseFloat(k[2]),
+        low: parseFloat(k[3]),
+        close: parseFloat(k[4])
+      }));
+    }
+
+    function detectSwings(candles, left = 2, right = 2) {
+      const highs = [];
+      const lows = [];
+      for (let i = left; i < candles.length - right; i++) {
+        let isHigh = true;
+        let isLow = true;
+        for (let j = i - left; j <= i + right; j++) {
+          if (j === i) continue;
+          if (candles[j].high >= candles[i].high) isHigh = false;
+          if (candles[j].low <= candles[i].low) isLow = false;
+        }
+        if (isHigh) highs.push({ index: i, price: candles[i].high });
+        if (isLow) lows.push({ index: i, price: candles[i].low });
+      }
+      return { highs, lows };
+    }
+
+    function evaluateDailyBias(dailyCandles) {
+      const last = dailyCandles[dailyCandles.length - 1];
+      const prev = dailyCandles[dailyCandles.length - 2];
+      const { highs, lows } = detectSwings(dailyCandles, 3, 3);
+      const rH = highs.slice(-2);
+      const rL = lows.slice(-2);
+
+      const swingHigh = rH.length ? Math.max(...rH.map(h => h.price)) : last.high;
+      const swingLow = rL.length ? Math.min(...rL.map(l => l.price)) : last.low;
+      const midEq = (swingHigh + swingLow) / 2;
+
+      let score = 0;
+      if (last.close > midEq) score += 2;
+      else score -= 2;
+
+      const sweptLow = rL.length && prev.low < rL[rL.length - 1].price && last.close > rL[rL.length - 1].price;
+      const sweptHigh = rH.length && prev.high > rH[rH.length - 1].price && last.close < rH[rH.length - 1].price;
+      if (sweptLow) score += 3;
+      if (sweptHigh) score -= 3;
+
+      const bias = score >= 0 ? "BULLISH" : "BEARISH";
+      return { bias, swingHigh, swingLow, midEq };
+    }
+
+    function detectSMCBlocks(candles) {
+      const fvgs = [];
+      const obs = [];
+      const breakers = [];
+      const rejections = [];
+
+      for (let i = 2; i < candles.length; i++) {
+        const c1 = candles[i - 2];
+        const c2 = candles[i - 1];
+        const c3 = candles[i];
+
+        // 1. Fair Value Gap (FVG) & Order Block (OB)
+        if (c1.high < c3.low) {
+          fvgs.push({ type: "BULLISH", index: i - 1, top: c3.low, bottom: c1.high });
+          if (c1.close < c1.open) {
+            obs.push({ type: "BULLISH", index: i - 2, top: c1.high, bottom: c1.low });
+          }
+        }
+        if (c1.low > c3.high) {
+          fvgs.push({ type: "BEARISH", index: i - 1, top: c1.low, bottom: c3.high });
+          if (c1.close > c1.open) {
+            obs.push({ type: "BEARISH", index: i - 2, top: c1.high, bottom: c1.low });
+          }
+        }
+
+        // 2. Rejection Block (Long Wick > 55% of total candle range)
+        const range = c2.high - c2.low;
+        if (range > 0) {
+          const bodyTop = Math.max(c2.open, c2.close);
+          const bodyBot = Math.min(c2.open, c2.close);
+          const lowerWick = bodyBot - c2.low;
+          const upperWick = c2.high - bodyTop;
+
+          if (lowerWick / range >= 0.55) {
+            rejections.push({ type: "BULLISH", index: i - 1, top: bodyBot, bottom: c2.low });
+          }
+          if (upperWick / range >= 0.55) {
+            rejections.push({ type: "BEARISH", index: i - 1, top: c2.high, bottom: bodyTop });
+          }
+        }
+      }
+
+      // 3. Breaker Block (Failed OB that got broken strongly)
+      const lastPrice = candles[candles.length - 1].close;
+      obs.forEach((ob) => {
+        if (ob.type === "BEARISH" && lastPrice > ob.top) {
+          breakers.push({ type: "BULLISH", index: ob.index, top: ob.top, bottom: ob.bottom });
+        }
+        if (ob.type === "BULLISH" && lastPrice < ob.bottom) {
+          breakers.push({ type: "BEARISH", index: ob.index, top: ob.top, bottom: ob.bottom });
+        }
+      });
+
+      return { fvgs, obs, breakers, rejections };
+    }
+
+    function generateSetup(ltfCandles, dailyBiasData) {
+      const last = ltfCandles[ltfCandles.length - 1];
+      const prev = ltfCandles[ltfCandles.length - 2];
+      const { highs, lows } = detectSwings(ltfCandles, 2, 2);
+      const { fvgs, obs, breakers, rejections } = detectSMCBlocks(ltfCandles);
+
+      const htfBullish = dailyBiasData.bias === "BULLISH";
+      const htfBiasLabel = dailyBiasData.bias;
+
+      const recentHighs = highs.slice(-4);
+      const recentLows = lows.slice(-4);
+      const swingHigh = recentHighs.length ? Math.max(...recentHighs.map(h => h.price)) : last.high * 1.003;
+      const swingLow = recentLows.length ? Math.min(...recentLows.map(l => l.price)) : last.low * 0.997;
+      const equilibrium = (swingHigh + swingLow) / 2;
+
+      const pdh = dailyBiasData.swingHigh;
+      const pdl = dailyBiasData.swingLow;
+
+      const sweptLow = recentLows.length && prev.low < recentLows[recentLows.length - 1].price && last.close > recentLows[recentLows.length - 1].price;
+      const sweptHigh = recentHighs.length && prev.high > recentHighs[recentHighs.length - 1].price && last.close < recentHighs[recentHighs.length - 1].price;
+      const idmSwept = htfBullish ? sweptLow : sweptHigh;
+
+      const activeFVG = fvgs.filter(f => f.type === htfBiasLabel).slice(-1)[0] || null;
+      const activeOB = obs.filter(o => o.type === htfBiasLabel).slice(-1)[0] || null;
+      const activeBreaker = breakers.filter(b => b.type === htfBiasLabel).slice(-1)[0] || null;
+      const activeRejection = rejections.filter(r => r.type === htfBiasLabel).slice(-1)[0] || null;
+
+      const isDiscount = last.close <= equilibrium;
+      const decimals = last.close < 10 ? 4 : 2;
+      const fmt = (v) => Number(v).toFixed(decimals);
+
+      let entry, sl, tp;
+      if (htfBullish) {
+        entry = isDiscount ? last.close : Math.min(last.close, activeFVG ? activeFVG.top : last.close * 0.9985);
+        const structLow = Math.min(
+          swingLow,
+          activeOB ? activeOB.bottom : swingLow,
+          activeRejection ? activeRejection.bottom : swingLow
+        );
+        sl = structLow * 0.9988;
+        const riskDist = Math.max(entry - sl, entry * 0.0018);
+        tp = swingHigh > entry + riskDist * 2 ? swingHigh : Math.max(pdh, entry + riskDist * 3);
+      } else {
+        entry = !isDiscount ? last.close : Math.max(last.close, activeFVG ? activeFVG.bottom : last.close * 1.0015);
+        const structHigh = Math.max(
+          swingHigh,
+          activeOB ? activeOB.top : swingHigh,
+          activeRejection ? activeRejection.top : swingHigh
+        );
+        sl = structHigh * 1.0012;
+        const riskDist = Math.max(sl - entry, entry * 0.0018);
+        tp = swingLow < entry - riskDist * 2 ? swingLow : Math.min(pdl, entry - riskDist * 3);
+      }
+
+      const rr = (Math.abs(tp - entry) / Math.max(Math.abs(entry - sl), 1e-8)).toFixed(2);
+
+      const foundBlocks = [];
+      if (activeOB) foundBlocks.push("OB");
+      if (activeFVG) foundBlocks.push("FVG");
+      if (activeBreaker) foundBlocks.push("Breaker");
+      if (activeRejection) foundBlocks.push("Rejection");
+
+      let conf = 55;
+      if ((htfBullish && isDiscount) || (!htfBullish && !isDiscount)) conf += 15;
+      if (activeFVG) conf += 8;
+      if (activeOB) conf += 8;
+      if (activeBreaker) conf += 7;
+      if (activeRejection) conf += 5;
+      if (idmSwept) conf += 10;
+
+      const reasons = [
+        `HTF Daily Bias: ${htfBiasLabel} (ডেইলি মার্কেট স্ট্রাকচার ও 0.5 ইকুইলিব্রিয়াম অনুযায়ী)।`,
+        `কনফ্লুয়েন্স ব্লকস: ${foundBlocks.length ? foundBlocks.join(" + ") : "Structure POI"} চার্টে মার্ক করা হয়েছে।`,
+        `লিকুইডিটি ও IDM: ${idmSwept ? "ইনডিউসমেন্ট / লিকুইডিটি সুইপ কনফার্ম হয়েছে ✓" : "নিকটবর্তী সুইং লিকুইডিটি টার্গেট করা হয়েছে"}।`,
+        `ড্র অন লিকুইডিটি (TP): ডেইলি হাই ${fmt(pdh)} / লো ${fmt(pdl)} এবং 1:${rr} রিস্ক-টু-রিওয়ার্ড (রিস্ক ${riskInput.value}%)।`
+      ];
+
+      return {
+        htfBiasLabel,
+        direction: htfBullish ? "BUY (Long)" : "SELL (Short)",
+        ht
