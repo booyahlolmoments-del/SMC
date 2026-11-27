@@ -33,6 +33,10 @@ input{width:100%;background:var(--pn2);border:1px solid var(--ln);color:var(--tx
 h3{font-size:15px;margin-bottom:2px}
 .note{font-size:12px;color:var(--mu);margin-top:14px;line-height:1.6}
 a{color:var(--gd)}
+.gr{font-size:42px;font-weight:800;width:66px;height:66px;border-radius:18px;display:grid;place-items:center;background:var(--pn2);border:2px solid currentColor}
+ul.r{list-style:none;padding:0;margin-top:10px;font-size:13px}ul.r li{padding:2px 0}
+.sm{width:100%;margin-top:10px;background:var(--pn2);border:1px solid var(--ln);color:var(--tx);border-radius:10px;padding:10px;font:inherit}
+summary{cursor:pointer;font-weight:600}
 </style></head><body>
 <header><h1>BTC <span>Strategy Lab</span></h1><div id="px">—</div></header>
 <div class="seg" id="tf"><button data-t="15m">15m</button><button data-t="1h" class="on">1h</button><button data-t="4h">4h</button></div>
@@ -41,7 +45,7 @@ a{color:var(--gd)}
 <div class="card"><h3>সেটিংস</h3>
 <div class="g2"><div><label>ন্যূনতম উইন রেট %</label><input id="swr" type="number"></div><div><label>ন্যূনতম প্রফিট ফ্যাক্টর</label><input id="spf" type="number" step=".1"></div>
 <div><label>ক্যাপিটাল (USDT)</label><input id="scap" type="number"></div><div><label>ঝুঁকি প্রতি ট্রেডে %</label><input id="srk" type="number" step=".1"></div></div></div>
-<p class="note">এটি শুধু ব্যক্তিগত বিশ্লেষণ টুল, আর্থিক পরামর্শ নয়। ব্যাকটেস্টের ফলাফল ভবিষ্যতের গ্যারান্টি দেয় না। ডেটা: Binance পাবলিক API (শুধু বন্ধ হয়ে যাওয়া ক্যান্ডেল ব্যবহার হয়)।</p>
+<p class="note">বড় খবরের (CPI, FOMC) আগে-পরে ট্রেড নেবেন না। এটি শুধু ব্যক্তিগত বিশ্লেষণ টুল, আর্থিক পরামর্শ নয়। ব্যাকটেস্টের ফলাফল ভবিষ্যতের গ্যারান্টি দেয় না। ডেটা: Binance পাবলিক API (শুধু বন্ধ হয়ে যাওয়া ক্যান্ডেল ব্যবহার হয়)।</p>
 <script>
 const $=s=>document.querySelector(s),R=(l,s)=>l?1:s?-1:0;
 const ld=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},sv=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
@@ -84,36 +88,58 @@ function bias(d){const{H,L}=swings(d);if(H.length<2||L.length<2)return{b:0,s:'�
 const hh=h1>h0,hl=l1>l0;let b=hh&&hl?1:!hh&&!hl?-1:0,s=b>0?'HH-HL':b<0?'LH-LL':'রেঞ্জ',ev='';
 if(c>h1){ev=b<0?'CHoCH ↑':'BOS ↑';b=1}else if(c<l1){ev=b>0?'CHoCH ↓':'BOS ↓';b=-1}
 return{b,s,ev,z:c>(h1+l1)/2?'Premium':'Discount'}}
-/* analysis (runs once per closed candle, then cached => setup doesn't flicker on refresh) */
-function analyze(D,F,E){const bd=bias(D),bf=bias(F),sc=2*bd.b+bf.b,B=sc>=2?1:sc<=-2?-1:0,x=ctx(E),n=E.length,sp=Math.floor(n*.6),rows=[];
+/* ===== v2: গ্রেডিং, সেশন, ফান্ডিং, জার্নাল ===== */
+const f$=v=>v.toLocaleString('en-US',{maximumFractionDigits:0}),cls=b=>b>0?'up':b<0?'dn':'mu',nm=b=>b>0?'বুলিশ':b<0?'বেয়ারিশ':'নিরপেক্ষ',gc={A:'up',B:'gd',C:'mu'};
+let J=ld('jr',[]),CUR=null;
+const sess=t=>{const h=new Date(t).getUTCHours();return h>=13&&h<18?{p:10,n:'লন্ডন+নিউ ইয়র্ক সেশন'}:(h>=7&&h<13)||(h>=18&&h<21)?{p:5,n:'একক সেশন'}:{p:0,n:'এশিয়া/ঘুমন্ত সময়'}};
+async function fut(){let r=null,oi=null;const u='https://fapi.binance.com';
+try{r=+(await(await fetch(u+'/fapi/v1/premiumIndex?symbol=BTCUSDT')).json()).lastFundingRate*100}catch(e){}
+try{const b=await(await fetch(u+'/futures/data/openInterestHist?symbol=BTCUSDT&period=1h&limit=7')).json();oi=(+b.at(-1).sumOpenInterest/+b[0].sumOpenInterest-1)*100}catch(e){}return{r,oi}}
+function analyze(D,F,E,fd){const bd=bias(D),bf=bias(F),be=bias(E),x=ctx(E),n=E.length,sp=Math.floor(n*.6),rows=[];
 for(const k in STR){const s=STR[k],t=bt(E,x,s.f),r={k,n:s.n,g:s.g,now:[n-1,n-2].map(i=>s.f(x,E,i)).find(v=>v)||0};
 for(const d of[1,-1]){const a=stat(t,d,0,n),o=stat(t,d,sp,n);r['s'+d]=a;r['ok'+d]=a.n>=15&&a.wr>=S.wr&&a.pf>=S.pf&&(o.n<5||o.pf>=1)}rows.push(r)}
-const o={bd,bf,B,rows,t:E.at(-1).t,setup:null,fire:[]};
-if(B){const f=rows.filter(r=>r.now==B&&r['ok'+B]);o.fire=f.map(r=>r.n);const g=new Set(f.map(r=>r.g));o.groups=g.size;
-if(g.size>=2){const e=E.at(-1).c,r=1.5*x.A.at(-1);o.setup={e,sl:e-B*r,t1:e+B*r*1.5,t2:e+B*r*3,wr:f.reduce((a,y)=>a+y['s'+B].wr,0)/f.length,grade:(B>0&&bf.z=='Discount')||(B<0&&bf.z=='Premium')?'A':'B'}}}
-return o}
-const f$=v=>v.toLocaleString('en-US',{maximumFractionDigits:0}),cls=b=>b>0?'up':b<0?'dn':'mu',nm=b=>b>0?'বুলিশ':b<0?'বেয়ারিশ':'নিরপেক্ষ';
-function draw(o,E){const B=o.B,s=o.setup;let h=`<div class="row" style="margin-top:12px">
-<div class="chip"><small>১D বায়াস</small><b class="${cls(o.bd.b)}">${nm(o.bd.b)}</b><small>${o.bd.s} ${o.bd.ev}</small></div>
+const sc=2*bd.b+bf.b,B=sc>=2?1:sc<=-2?-1:0,dir=B||bf.b||bd.b||(x.c[n-1]>x.E200[n-1]?1:-1);
+const f=rows.filter(r=>r.now==dir&&r['ok'+dir]),g=new Set(f.map(r=>r.g)),sw=rows.find(r=>r.k=='sweep'),ss=sess(E[n-1].t),P=[],add=(p,t)=>P.push([p,t]);
+if(B)add(25,'১D ও ৪H বায়াস একমত');else if(dir==bf.b||dir==bd.b)add(8,'শুধু একটি টাইমফ্রেমের বায়াস মেলে');else add(0,'পরিষ্কার বায়াস নেই');
+if((dir>0&&bf.z=='Discount')||(dir<0&&bf.z=='Premium'))add(15,'দাম সঠিক জোনে ('+bf.z+')');else add(0,'দাম ভুল জোনে ('+bf.z+')');
+if(sw&&sw.now==dir)add(20,'লিকুইডিটি সুইপ হয়েছে');
+if((dir>0&&be.ev.includes('↑'))||(dir<0&&be.ev.includes('↓')))add(10,'স্ট্রাকচার শিফট ('+be.ev+')');
+add(ss.p,ss.n);
+if(g.size)add(Math.min(20,g.size*10),g.size+' গ্রুপের নির্ভরযোগ্য স্ট্র্যাটেজি একমত');else add(0,'নির্ভরযোগ্য স্ট্র্যাটেজি একমত নয়');
+if(fd.r!=null){if((dir>0&&fd.r<=.005)||(dir<0&&fd.r>=.02))add(10,'ফান্ডিংয়ে ভিড় উল্টো দিকে');else if((dir>0&&fd.r>.04)||(dir<0&&fd.r<-.02))add(-10,'ফান্ডিংয়ে ভিড় একই দিকে (ট্র্যাপের ঝুঁকি)')}
+const score=P.reduce((a,y)=>a+y[0],0),grade=score>=70?'A':score>=45?'B':'C';
+const e=E[n-1].c,A=x.A[n-1],rc=E.slice(-10),ex=dir>0?Math.min(...rc.map(y=>y.l)):Math.max(...rc.map(y=>y.h)),r=Math.min(2.5*A,Math.max(A,Math.abs(e-ex)+.2*A));
+return{bd,bf,dir,B,rows,P,score,grade,ss:ss.n,fd,t:E[n-1].t,fire:f.map(y=>y.n),wr:f.length?f.reduce((a,y)=>a+y['s'+dir].wr,0)/f.length:0,setup:{e,sl:e-dir*r,t1:e+dir*r*1.5,t2:e+dir*r*3,r}}}
+function resolve(E){let ch=0;J.forEach(x=>{if(x.r!=null||x.tf!=TF)return;let be=0;const L=x.d>0;for(const c of E){if(c.t<=x.t)continue;const sl=be?x.e:x.sl;if(L?c.l<=sl:c.h>=sl){x.r=be?.75:-1;break}if(!be&&(L?c.h>=x.t1:c.l<=x.t1))be=1;if(be&&(L?c.h>=x.t2:c.l<=x.t2)){x.r=2.25;break}}if(x.r!=null)ch=1});if(ch)sv('jr',J)}
+function logTrade(){const o=CUR,s=o.setup;if(J.some(x=>x.t==o.t&&x.tf==TF))return;J.unshift({t:o.t,tf:TF,d:o.dir,g:o.grade,e:s.e,sl:s.sl,t1:s.t1,t2:s.t2,s:o.fire,r:null});sv('jr',J);draw(o,window.EE)}
+function clearJ(){if(confirm('পুরো জার্নাল মুছবেন?')){J=[];sv('jr',J);draw(CUR,window.EE)}}
+function draw(o,E){window.EE=E;resolve(E);const s=o.setup,d=o.dir,rk=o.grade=='A'?S.rk:o.grade=='B'?S.rk/2:0,q=rk?S.cap*rk/100/s.r:0,td=new Date().toDateString(),lock=J.filter(x=>x.r<0&&new Date(x.t).toDateString()==td).length>=2;
+let h=lock?'<div class="card dn"><b>আজকের মতো ট্রেড বন্ধ।</b> আজ দুটো SL হয়েছে, কাল নতুন করে শুরু করুন।</div>':'';
+h+=`<div class="row" style="margin-top:12px"><div class="chip"><small>১D বায়াস</small><b class="${cls(o.bd.b)}">${nm(o.bd.b)}</b><small>${o.bd.s} ${o.bd.ev}</small></div>
 <div class="chip"><small>৪H বায়াস</small><b class="${cls(o.bf.b)}">${nm(o.bf.b)}</b><small>${o.bf.s} ${o.bf.ev}</small></div>
-<div class="chip"><small>৪H জোন</small><b>${o.bf.z||'—'}</b><small>${o.bf.z=='Discount'?'লং-এর জন্য ভালো':o.bf.z=='Premium'?'শর্টের জন্য ভালো':''}</small></div></div>`;
-if(s){const rr=Math.abs(s.e-s.sl),q=S.cap*S.rk/100/rr;h+=`<div class="card"><div class="big ${cls(B)}">${B>0?'▲ LONG':'▼ SHORT'} সেটআপ <span class="mu" style="font-size:13px;font-weight:500">গ্রেড ${s.grade}</span></div>
-<div class="mu" style="font-size:13px">${o.groups} গ্রুপের ${o.fire.length}টি স্ট্র্যাটেজি একমত: ${o.fire.join(', ')}</div>
+<div class="chip"><small>৪H জোন</small><b>${o.bf.z||'—'}</b><small>${o.ss}</small></div></div>
+<div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><div><div class="big ${cls(d)}">${d>0?'▲ LONG':'▼ SHORT'}</div><div class="mu" style="font-size:13px">স্কোর ${o.score}/110</div></div><div class="gr ${gc[o.grade]}">${o.grade}</div></div>
+<div style="font-size:13px;margin-top:8px" class="${gc[o.grade]}">${o.grade=='A'?'শক্ত সেটআপ: পুরো ঝুঁকি ('+S.rk+'%)':o.grade=='B'?'মাঝারি: অর্ধেক ঝুঁকি ('+S.rk/2+'%)':'দুর্বল: নেবেন না, শুধু ডেমো/পর্যবেক্ষণ'}</div>
+<ul class="r">${o.P.map(y=>`<li><b class="${y[0]>0?'up':y[0]<0?'dn':'mu'}">${y[0]>0?'+':''}${y[0]}</b> ${y[1]}</li>`).join('')}</ul>
 <div class="lv"><div><small>এন্ট্রি</small><b>${f$(s.e)}</b></div><div><small>স্টপ লস</small><b class="dn">${f$(s.sl)}</b></div>
-<div><small>TP1 (১:১.৫)</small><b class="up">${f$(s.t1)}</b></div><div><small>TP2 (১:৩)</small><b class="up">${f$(s.t2)}</b></div>
-<div><small>ব্যাকটেস্ট গড় উইন রেট</small><b>${s.wr.toFixed(0)}%</b></div><div><small>সাইজ (${S.rk}% ঝুঁকি)</small><b>${q.toFixed(4)} BTC</b></div></div>
-<canvas id="cv"></canvas></div>`}
-else h+=`<div class="card"><div class="big gd">⏸ এখন ট্রেড নয়</div><div class="mu" style="font-size:14px">${B?`বায়াস ${nm(B)}, কিন্তু অন্তত ২টি আলাদা গ্রুপের নির্ভরযোগ্য স্ট্র্যাটেজি একমত হয়নি। পরের ক্যান্ডেল বন্ধ হওয়া পর্যন্ত অপেক্ষা করুন।`:'১D আর ৪H বায়াস একমত নয়, তাই কোনো দিকেই ট্রেড দেখানো হচ্ছে না।'}</div></div>`;
-h+=`<div class="card"><h3>স্ট্র্যাটেজি রিপোর্ট</h3><div class="mu" style="font-size:12px">${B?nm(B)+' দিকের ফলাফল':'লং দিকের ফলাফল'} · ✓ = আপনার সীমা পার · 🔥 = এখন সিগনাল</div>
-<table><tr><th>নাম</th><th>জয়%</th><th>PF</th><th>ট্রেড</th><th></th></tr>${o.rows.map(r=>{const d=B||1,a=r['s'+d];return`<tr class="${r.now==d&&r['ok'+d]?'fire':''}"><td>${r.n}</td><td>${a.wr.toFixed(0)}</td><td>${a.pf.toFixed(2)}</td><td>${a.n}</td><td>${r['ok'+d]?'✓':'✗'}${r.now==d?'🔥':''}</td></tr>`}).join('')}</table>
-<p class="note" style="margin-top:8px">ব্যাকটেস্ট শেষ ~১০০০ ক্যান্ডেলে (SL ১.৫ ATR, TP ১.৫R)। শেষ ৪০% ডেটা আলাদা যাচাইয়ের জন্য; সেখানে PF ১-এর নিচে নামলে স্ট্র্যাটেজি বাদ।</p></div>`;
-$('#out').innerHTML=h;if(s)chart(E,s,B)}
-function chart(E,s,B){const cv=$('#cv'),dp=devicePixelRatio||1,W=cv.clientWidth,Hh=cv.clientHeight;cv.width=W*dp;cv.height=Hh*dp;const g=cv.getContext('2d');g.scale(dp,dp);
+<div><small>TP1 (১:১.৫): অর্ধেক বের হন, SL এন্ট্রিতে আনুন</small><b class="up">${f$(s.t1)}</b></div><div><small>TP2 (১:৩): বাকিটা</small><b class="up">${f$(s.t2)}</b></div>
+<div><small>ঝুঁকি দূরত্ব</small><b>${f$(s.r)} (${(s.r/s.e*100).toFixed(2)}%)</b></div><div><small>সাইজ</small><b>${q?q.toFixed(4)+' BTC':'—'}</b></div></div>
+<div class="mu" style="font-size:12px;margin-top:8px">ফান্ডিং: ${o.fd.r==null?'অনুপলব্ধ':o.fd.r.toFixed(4)+'%'} · ওপেন ইন্টারেস্ট (৬ ঘণ্টা): ${o.fd.oi==null?'অনুপলব্ধ':(o.fd.oi>0?'+':'')+o.fd.oi.toFixed(1)+'%'}</div>
+<canvas id="cv"></canvas><button class="sm" onclick="logTrade()">📒 এই ট্রেড জার্নালে রাখুন</button></div>`;
+const cl=J.filter(x=>x.r!=null),op=J.length-cl.length,R2=a=>a.reduce((z,x)=>z+x.r,0);
+h+=`<div class="card"><h3>জার্নাল</h3><div class="mu" style="font-size:12px">রাখা ট্রেড নিজে থেকে ফলাফল পায় (${TF} ক্যান্ডেলে)। খোলা: ${op}</div>
+<table><tr><th>গ্রেড</th><th>ট্রেড</th><th>জয়%</th><th>মোট R</th></tr>${['A','B','C'].map(g=>{const q=cl.filter(x=>x.g==g),t=R2(q);return`<tr><td class="${gc[g]}">${g}</td><td>${q.length}</td><td>${q.length?Math.round(q.filter(x=>x.r>0).length/q.length*100):0}%</td><td class="${t>=0?'up':'dn'}">${t.toFixed(2)}</td></tr>`}).join('')}</table>
+${J.slice(0,6).map(x=>`<div class="mu" style="font-size:12px;margin-top:6px">${new Date(x.t).toLocaleString([],{day:'numeric',month:'short',hour:'numeric'})} · ${x.d>0?'লং':'শর্ট'} · ${x.g} · ${x.r==null?'খোলা':x.r<0?'SL (-1R)':x.r<1?'TP1 তারপর BE (+0.75R)':'TP2 (+2.25R)'}</div>`).join('')}
+${J.length?'<button class="sm" onclick="clearJ()">জার্নাল মুছুন</button>':''}</div>
+<div class="card"><details><summary>স্ট্র্যাটেজি রিপোর্ট (${nm(o.dir)} দিক)</summary><table><tr><th>নাম</th><th>জয়%</th><th>PF</th><th>ট্রেড</th><th></th></tr>${o.rows.map(r=>{const a=r['s'+d];return`<tr class="${r.now==d&&r['ok'+d]?'fire':''}"><td>${r.n}</td><td>${a.wr.toFixed(0)}</td><td>${a.pf.toFixed(2)}</td><td>${a.n}</td><td>${r['ok'+d]?'✓':'✗'}${r.now==d?'🔥':''}</td></tr>`}).join('')}</table>
+<p class="note">✓ = সীমা পার, 🔥 = এখন সিগনাল। ব্যাকটেস্ট ~১০০০ ক্যান্ডেলে, শেষ ৪০% আলাদা যাচাই।</p></details></div>`;
+$('#out').innerHTML=h;chart(E,s)}
+function chart(E,s){const cv=$('#cv'),dp=devicePixelRatio||1,W=cv.clientWidth,Hh=cv.clientHeight;cv.width=W*dp;cv.height=Hh*dp;const g=cv.getContext('2d');g.scale(dp,dp);
 const d=E.slice(-80),L=[s.e,s.sl,s.t1,s.t2],hi=Math.max(...d.map(y=>y.h),...L),lo=Math.min(...d.map(y=>y.l),...L),p=(hi-lo)*.06,y=v=>(hi+p-v)/(hi-lo+2*p)*Hh,w=(W-58)/d.length;
 d.forEach((c,i)=>{const x=i*w+w/2,u=c.c>=c.o;g.strokeStyle=g.fillStyle=u?'#2fd1a4':'#ff6b7d';g.beginPath();g.moveTo(x,y(c.h));g.lineTo(x,y(c.l));g.stroke();g.fillRect(x-w*.35,Math.min(y(c.o),y(c.c)),w*.7,Math.max(1,Math.abs(y(c.o)-y(c.c))))});
 [['Entry',s.e,'#e9eefb'],['SL',s.sl,'#ff6b7d'],['TP1',s.t1,'#2fd1a4'],['TP2',s.t2,'#2fd1a4']].forEach(([n,v,c])=>{g.strokeStyle=g.fillStyle=c;g.setLineDash([5,4]);g.beginPath();g.moveTo(0,y(v));g.lineTo(W-56,y(v));g.stroke();g.setLineDash([]);g.font='10px system-ui';g.fillText(n+' '+f$(v),W-56,y(v)+3)})}
-async function run(){const b=$('#go');b.disabled=1;b.textContent='বিশ্লেষণ চলছে…';try{const[D,F,E]=await Promise.all([kl('1d',400),kl('4h',500),kl(TF,1000)]);
-const key=[TF,E.at(-1).t,S.wr,S.pf].join('|');let o=ld('res');if(!o||o.key!=key){o=analyze(D,F,E);o.key=key;sv('res',o)}draw(o,E)}
+async function run(){const b=$('#go');b.disabled=1;b.textContent='বিশ্লেষণ চলছে…';try{const[D,F,E,fd]=await Promise.all([kl('1d',400),kl('4h',500),kl(TF,1000),fut()]);
+const key=['v2',TF,E.at(-1).t,S.wr,S.pf].join('|');let o=ld('res');if(!o||o.key!=key){o=analyze(D,F,E,fd);o.key=key;sv('res',o)}CUR=o;draw(o,E)}
 catch(e){$('#out').innerHTML='<div class="card dn">ডেটা আনা যায়নি। ইন্টারনেট চেক করুন, দরকার হলে VPN ব্যবহার করুন।</div>'}
 b.disabled=0;b.textContent='🔍 ট্রেড খুঁজুন'}
 async function price(){try{const r=await api('/api/v3/ticker/price?symbol=BTCUSDT');$('#px').textContent='$'+f$(+r.price)}catch(e){}}
